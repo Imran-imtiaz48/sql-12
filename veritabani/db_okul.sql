@@ -9,6 +9,7 @@ KURULUM DETAYLARI
 
  -------------------------------
 |Db_okul veritabanı  - 2023    |
+|--Update 03.11.25             |
  -------------------------------
 _________________________
 |Bulunan Tablolar:      |
@@ -28,30 +29,33 @@ _________________________
 BEGIN TRY
 SET NOCOUNT ON;
 USE master;
-if exists (select * from sysdatabases where name='Db_okul')
-        --print('Db_okul veritabanı sunucuda bulundu yeniden oluşturulmadan önce silinecek.');
-		USE tempdb;
+
 DECLARE @SQL nvarchar(1000);
 IF EXISTS (SELECT TOP 1 * FROM sys.databases WHERE [name] = N'Db_okul')
 BEGIN
-    SET @SQL = N'USE [Db_okul];
-                 ALTER DATABASE Db_okul SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-                 USE [tempdb];
+    SET @SQL = N'ALTER DATABASE Db_okul SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
                  DROP DATABASE Db_okul;';
     EXEC (@SQL);
 END;
+
+
 DECLARE @device_directory NVARCHAR(520)
 SELECT @device_directory = SUBSTRING(filename, 1, CHARINDEX(N'master.mdf', LOWER(filename)) - 1)
 FROM master.dbo.sysaltfiles WHERE dbid = 1 AND fileid = 1
+
+
 EXECUTE (N'CREATE DATABASE Db_okul
   ON PRIMARY (NAME = N''Db_okul'', FILENAME = N''' + @device_directory + N'dokul.mdf'')
   LOG ON (NAME = N''dokul_log'',  FILENAME = N''' + @device_directory + N'dokul.ldf'')')
---print('Db_okul veritabanı oluşturuldu.')
-set quoted_identifier on
-SET DATEFORMAT mdy
-use "Db_okul"
-/*TABLE*/
 
+DECLARE @SQL_Setup nvarchar(MAX);
+SET @SQL_Setup = N'
+USE "Db_okul"; 
+
+set quoted_identifier on;
+SET DATEFORMAT mdy;
+
+/*TABLE*/
 CREATE TABLE "ogrenci" (
 	"id" "int" IDENTITY (1, 1) NOT NULL ,
 	"tc_kimlik" nvarchar (50) NOT NULL,
@@ -60,12 +64,12 @@ CREATE TABLE "ogrenci" (
 	"dogum_yeri" nvarchar (50) NOT NULL ,
 	"dogum_tarihi" date,
 	CONSTRAINT "PK_ogrenci" PRIMARY KEY  CLUSTERED("id")
-	)
+	);
 CREATE TABLE "bolum" (
 "id" "int" IDENTITY (1, 1) NOT NULL,
 "bolum_adi" NVARCHAR(100) NOT NULL,
 CONSTRAINT "PK_bolum" PRIMARY KEY  CLUSTERED("id"),
-)
+);
 CREATE TABLE "ogretmen" (
 "id" "int" IDENTITY (1, 1) NOT NULL ,
 "ad" NVARCHAR(20) NOT NULL,
@@ -75,14 +79,14 @@ CREATE TABLE "ogretmen" (
 "dogum_yeri" NVARCHAR(40),
 CONSTRAINT "PK_ogretmen" PRIMARY KEY  CLUSTERED("id"),
 CONSTRAINT "FK_bolumO" FOREIGN KEY("bolum_id") REFERENCES bolum(id) ON DELETE SET NULL ON UPDATE NO ACTION,
-)
+);
 
 CREATE TABLE ders (
 "id" "int" IDENTITY (1, 1) NOT NULL ,
 "ders_adi" NVARCHAR(50) NOT NULL,
 "brans" NVARCHAR(40),
 CONSTRAINT "PK_ders" PRIMARY KEY  CLUSTERED("id"),
-)
+);
 
 CREATE TABLE ders_ogretmen (
 "id" "int" IDENTITY (1, 1) NOT NULL ,
@@ -91,7 +95,7 @@ CREATE TABLE ders_ogretmen (
 CONSTRAINT "PK_ders_ogretmen" PRIMARY KEY  CLUSTERED("id"),
 CONSTRAINT "FK_ders" FOREIGN KEY("ders_id") REFERENCES ders(id) ON DELETE CASCADE ON UPDATE NO ACTION,
 CONSTRAINT "FK_ogretmenD" FOREIGN KEY("ogretmen_id") REFERENCES ogretmen(id) ON DELETE CASCADE ON UPDATE NO ACTION,
-)
+);
 
 CREATE TABLE ders_bolum (
 "id" "int" IDENTITY (1, 1) NOT NULL ,
@@ -100,7 +104,7 @@ CREATE TABLE ders_bolum (
 CONSTRAINT "PK_ders_bolum" PRIMARY KEY  CLUSTERED("id"),
 CONSTRAINT "FK_bolumD" FOREIGN KEY("bolum_id") REFERENCES bolum(id) ON DELETE CASCADE ON UPDATE NO ACTION,
 CONSTRAINT "FK_dersB" FOREIGN KEY("ders_id") REFERENCES ders(id) ON DELETE CASCADE ON UPDATE NO ACTION,
-)
+);
 
 CREATE TABLE "ogrenci_detay" (
 	"id" "int" IDENTITY (1, 1) NOT NULL ,
@@ -114,61 +118,63 @@ CREATE TABLE "ogrenci_detay" (
 	CONSTRAINT "FK_ogrenci" FOREIGN KEY("ogrenci_id") REFERENCES ogrenci(id) ON DELETE CASCADE ON UPDATE CASCADE,
 	CONSTRAINT "FK_danisman" FOREIGN KEY("danisman_id") REFERENCES ogretmen(id) ON DELETE SET NULL ON UPDATE NO ACTION,
 	CONSTRAINT "FK_bolum" FOREIGN KEY("bolum_id") REFERENCES bolum(id) ON DELETE SET NULL ON UPDATE NO ACTION,
-	)
---print('Db_okul veritabanına ait tablolar oluşturuldu.')
+	);
 /*TABLE*/
 
 /*DATA*/
+
 INSERT bolum VALUES
-('Bilgisayar programcılığı'),
-('Web Tasarımı ve Kodlama'),
-('İnternet ve Ağ Teknolojileri'),
-('Muhasebe')
+(N''Bilgisayar programcılığı''),
+(N''Web Tasarımı ve Kodlama''),
+(N''İnternet ve Ağ Teknolojileri''),
+(N''Muhasebe'');
 
 INSERT ogretmen VALUES
-('Abdulmelik','Derinkök',NULL,'Eğitim Bilimleri','Malatya'),
-('Ahmet','Mutlu',NULL,'Bilgisayar','İzmir'),
-('Erhan','Kara',1,'Bilgisayar','Bursa'),
-('Yusuf','Aydın',2,'Web Tasarım','Sakarya'),
-('Ali','Türk',2,'Web Tasarım','Edirne')
+(N''Abdulmelik'',N''Derinkök'',NULL,N''Eğitim Bilimleri'',N''Malatya''),
+(N''Ahmet'',N''Mutlu'',NULL,N''Bilgisayar'',N''İzmir''),
+(N''Erhan'',N''Kara'',1,N''Bilgisayar'',N''Bursa''),
+(N''Yusuf'',N''Aydın'',2,N''Web Tasarım'',N''Sakarya''),
+(N''Ali'',N''Türk'',2,N''Web Tasarım'',N''Edirne'');
+
 INSERT  ogrenci VALUES 
-('11111111110', 'Ahmet','Ünlü','Malatya','1997-05-18'),
-('22222222220', 'Mehmet','Yılmaz','İstanbul','1999-09-17'),
-('33333333330', 'Ayşe','Demir','Hatay','1997-08-05'),
-('44444444440', 'Hacer','Çakır','Siirt','1997-03-12'),
-('55555555550', 'Hamdi','Kaya','Gaziantep','1996-01-25'),
-('66666666660', 'Yasemin','Çelik','Rize','1999-05-30'),
-('77777777770', 'Zeynep','Aydın','Bilecik','1995-02-06')
+(N''11111111110'', N''Ahmet'',N''Ünlü'',N''Malatya'',''1997-05-18''),
+(N''22222222220'', N''Mehmet'',N''Yılmaz'',N''İstanbul'',''1999-09-17''),
+(N''33333333330'', N''Ayşe'',N''Demir'',N''Hatay'',''1997-08-05''),
+(N''44444444440'', N''Hacer'',N''Çakır'',N''Siirt'',''1997-03-12''),
+(N''55555555550'', N''Hamdi'',N''Kaya'',N''Gaziantep'',''1996-01-25''),
+(N''66666666660'', N''Yasemin'',N''Çelik'',N''Rize'',''1999-05-30''),
+(N''77777777770'', N''Zeynep'',N''Aydın'',N''Bilecik'',''1995-02-06'');
 
 INSERT  ogrenci_detay(ogrenci_id,danisman_id,bolum_id,ortalama,telefon,adres) VALUES 
-(1,1, 1,65,'05541234567','Merkez - Bilecik'),
-(2,3, 3,73,'05351234567','Merkez - Bilecik'),
-(3,4, 2,38,'05451234567','Merkez - Bilecik'),
-(4,5, NULL,92,'05051234567','Merkez - Bilecik'),
-(5,2, 1,79,'05301234567','Merkez - Bilecik'),
-(6,1, 2,48,'05321234567','Pazayeri - Bilecik'),
-(7,5, 3,55,'05441234567','Pazayeri - Bilecik')
+(1,1, 1,65,N''05541234567'',N''Merkez - Bilecik''),
+(2,3, 3,73,N''05351234567'',N''Merkez - Bilecik''),
+(3,4, 2,38,N''05451234567'',N''Merkez - Bilecik''),
+(4,5, NULL,92,N''05051234567'',N''Merkez - Bilecik''),
+(5,2, 1,79,N''05301234567'',N''Merkez - Bilecik''),
+(6,1, 2,48,N''05321234567'',N''Pazayeri - Bilecik''),
+(7,5, 3,55,N''05441234567'',N''Pazayeri - Bilecik'');
 
 INSERT  ogrenci_detay VALUES 
-(3,2, NULL,70,'05061234567','Pazayeri - Bilecik'),
-(5,3, 1,77,'05381234567','Pazayeri - Bilecik')
+(3,2, NULL,70,N''05061234567'',N''Pazayeri - Bilecik''),
+(5,3, 1,77,N''05381234567'',N''Pazayeri - Bilecik'');
 
 INSERT  ders VALUES 
-('Veritabanı ve Yönetim Sistemleri', 'Bilgisayar'),
-('Web Tasarımın Temelleri', 'Bilgisayar')
+(N''Veritabanı ve Yönetim Sistemleri'', N''Bilgisayar''),
+(N''Web Tasarımın Temelleri'', N''Bilgisayar'');
 INSERT  ders(ders_adi) VALUES 
-('Proje Yönetimi')
+(N''Proje Yönetimi'');
 INSERT  ders VALUES 
-('Temel Elektronik', 'Elektrik'),
-('Matematik', 'Kültür'),
-('Tarih', 'Kültür'),
-('Türk Dili', 'Kültür'),
-('Ağ Cihazları', 'Ağ Teknolojileri'),
-('Kablosuz Ağ Cihazları', 'Ağ Teknolojileri'),
-('Mobil Uygulama Geliştirme', 'Web'),
-('İleri Web Programlama', 'Bilgisayar'),
-('Grafik ve Animasyon', 'Web'),
-('Kullanıcı Arabirimi Tasarımı', 'Web')
+(N''Temel Elektronik'', N''Elektrik''),
+(N''Matematik'', N''Kültür''),
+(N''Tarih'', N''Kültür''),
+(N''Türk Dili'', N''Kültür''),
+(N''Ağ Cihazları'', N''Ağ Teknolojileri''),
+(N''Kablosuz Ağ Cihazları'', N''Ağ Teknolojileri''),
+(N''Mobil Uygulama Geliştirme'', N''Web''),
+(N''İleri Web Programlama'', N''Bilgisayar''),
+(N''Grafik ve Animasyon'', N''Web''),
+(N''Kullanıcı Arabirimi Tasarımı'', N''Web'');
+
 INSERT ders_bolum VALUES
 (1,1),
 (2,1),
@@ -188,7 +194,8 @@ INSERT ders_bolum VALUES
 (2,10),
 (1,11),
 (2,12),
-(1,13)
+(1,13);
+
 INSERT ders_ogretmen VALUES
 (1,1),
 (1,2),
@@ -198,12 +205,23 @@ INSERT ders_ogretmen VALUES
 (4,1),
 (13,2),
 (11,2),
-(10,1)
-
+(10,1);
 /*DATA*/
---print('Db_okul veritabanına ait veriler oluşturuldu.')
+';
+
+
+EXEC sp_executesql @SQL_Setup;
+
 print('"Db_okul" veritabanı, tabloları ve verileri oluşturuldu.')
 END TRY
 BEGIN CATCH
-PRINT('HATA')
+    PRINT('!!! HATA OLUŞTU !!!');
+    
+    SELECT 
+        ERROR_NUMBER() AS ErrorNumber,
+        ERROR_STATE() AS ErrorState,
+        ERROR_SEVERITY() AS ErrorSeverity,
+        ERROR_PROCEDURE() AS ErrorProcedure,
+        ERROR_LINE() AS ErrorLine,
+        ERROR_MESSAGE() AS ErrorMessage;
 END CATCH
